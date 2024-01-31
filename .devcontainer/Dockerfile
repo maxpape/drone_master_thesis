@@ -14,17 +14,33 @@ RUN groupadd --gid $USER_GID $USERNAME \
 # Switch from root to user
 USER $USERNAME
 
+ADD . .
 # Add user to video group to allow access to webcam
 RUN sudo usermod --append --groups video $USERNAME
 
 # Update all packages
-RUN sudo apt update && sudo apt upgrade -y
+RUN sudo apt update -y && sudo apt upgrade -y
 
+RUN sudo apt install wget
 # Install Git
 RUN sudo apt install -y git
+
+RUN sudo apt install -y ros-noetic-mavros ros-noetic-mavros-extras ros-noetic-mavros-msgs
+
+RUN sudo apt install -y python3-tk
 
 # Rosdep update
 RUN rosdep update
 
 # Source the ROS setup file
 RUN echo "source /opt/ros/${ROS_DISTRO}/setup.bash" >> ~/.bashrc
+
+RUN sudo wget https://raw.githubusercontent.com/mavlink/mavros/master/mavros/scripts/install_geographiclib_datasets.sh
+
+RUN sudo chmod +x ./install_geographiclib_datasets.sh  
+
+RUN sudo ./install_geographiclib_datasets.sh
+
+RUN sudo chmod +x ubuntu.sh
+
+RUN sudo ./ubuntu.sh

@@ -30,3 +30,9 @@
 *.exe
 *.out
 *.app
+
+ros/.catkin_tools/
+ros/build/
+ros/devel/
+ros/logs/
+c_generated_code/

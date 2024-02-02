@@ -2,9 +2,9 @@
 
 import rospy
 from geometry_msgs.msg import PoseStamped, AccelWithCovarianceStamped, Vector3Stamped, TwistStamped, Vector3
-from mavros_msgs.msg import State
+from mavros_msgs.msg import State, PositionTarget
 from mavros_msgs.srv import CommandBool, CommandBoolRequest, SetMode, SetModeRequest
-
+from sensor_msgs.msg import Imu
 
 from acados_template import AcadosOcp, AcadosOcpSolver, AcadosSimSolver
 from drone_model import export_drone_ode_model
@@ -13,6 +13,42 @@ import numpy as np
 import scipy.linalg
 import scipy.interpolate
 from casadi import vertcat
+
+# variables
+
+current_state = State()
+
+curr_state = np.zeros(9)
+
+N_horizon = 50
+Tf = 5
+
+
+x0 = curr_state
+
+aMax = 5
+vMax = 5
+
+
+
+
+
+
+
+
+
+
+class OCP:
+    def __init__(self, N_horizon, Tf, aMax, vMax):
+        self.N_horizon = N_horizon
+        self.Tf = Tf
+        self.aMax = aMax
+        self.vMax = vMax
+        
+        
+        
+        
+    
 
 
 def setup(x0, aMax, vMax, N_horizon, Tf):
@@ -35,9 +71,9 @@ def setup(x0, aMax, vMax, N_horizon, Tf):
     ocp.cost.cost_type_e = 'NONLINEAR_LS'
 
     
-    Q_mat = np.zeros((9,9))
-    Q_mat[0,0] = 1
-    Q_mat[1,1] = 1
+    Q_mat = np.eye((9))
+    Q_mat[0,0] = 2
+    Q_mat[1,1] = 2
     Q_mat[2,2] = 2
     
     R_mat = np.eye(3)
@@ -64,32 +100,29 @@ def setup(x0, aMax, vMax, N_horizon, Tf):
     
     ocp.constraints.lbx = np.array([-vMax, -vMax, -vMax])
     ocp.constraints.ubx = np.array([+vMax, +vMax, +vMax])
-
+    
+    ocp.constraints.lbx_e = np.array([-vMax, -vMax, -vMax])
+    ocp.constraints.ubx_e = np.array([+vMax, +vMax, +vMax])
+    
+ 
     ocp.constraints.x0 = x0
     ocp.constraints.idxbu = np.array([0, 1, 2])
     ocp.constraints.idxbx = np.array([3, 4, 5])
-
-
-    # slack for constraints
-    ocp.constraints.lsbx = np.array([-5,-5,-5])
-    ocp.constraints.lsbx = np.array([+5,+5,+5])
-    ocp.constraints.idxsbx = np.array([0,1,2])
     
+    ocp.constraints.idxbx_e = np.array([3,4,5])
+
+
+    ## slack for constraints
+    ocp.constraints.lsbx = np.array([-1,-1,-1])
+    ocp.constraints.usbx = np.array([+1,+1,+1])
+    ocp.constraints.idxsbx = np.array([0,1,2])
+    #
     ns = 3
-    ocp.cost.zl = 10e2 * np.ones((ns,)) # gradient wrt lower slack at intermediate shooting nodes (1 to N-1)
+    ocp.cost.zl = 10e-1 * np.ones((ns,)) # gradient wrt lower slack at intermediate shooting nodes (1 to N-1)
     ocp.cost.Zl = np.ones((ns,))    # diagonal of Hessian wrt lower slack at intermediate shooting nodes (1 to N-1)
-    ocp.cost.zu = 10e2 * np.ones((ns,))    
+    ocp.cost.zu = 10e-1 * np.ones((ns,))    
     ocp.cost.Zu = np.ones((ns,))  
     
-    
-    #ocp.constraints.lsbx = np.array([-10, -10, -10])
-    #ocp.constraints.usbx = np.array([+10, +10, +10])
-    #ocp.constraints.idxsbx = np.array([0, 1, 2])
-    #ocp.constraints.idxsbx_e = np.array([0, 1, 2])
-    ##ocp.solver_options.qp_solver = 'PARTIAL_CONDENSING_HPIPM' # FULL_CONDENSING_QPOASES
-    #ocp.solver_options.hessian_approx = 'GAUSS_NEWTON'
-    #ocp.solver_options.integrator_type = 'IRK'
-    #ocp.solver_options.sim_method_newton_iter = 10
 
     
     ocp.solver_options.nlp_solver_type = 'SQP_RTI'
@@ -106,10 +139,10 @@ def setup(x0, aMax, vMax, N_horizon, Tf):
 
     return acados_ocp_solver
 
-current_state = State()
 
 
 
+ocp_solver = setup(x0, aMax, vMax, N_horizon, Tf)
 
 
 
@@ -183,26 +216,30 @@ def state_cb(msg):
     
 def pose_cb(msg):
     global curr_state
-    curr_state[0] = np.round(msg.pose.position.x, decimals=2)
-    curr_state[1] = np.round(msg.pose.position.y, decimals=2)
-    curr_state[2] = np.round(msg.pose.position.z, decimals=2)
+    curr_state[0] = msg.pose.position.x
+    curr_state[1] = msg.pose.position.y
+    curr_state[2] = msg.pose.position.z
 
 def vel_cb(msg):
     global curr_state
-    curr_state[3] = np.round(msg.twist.linear.x, decimals=2)
-    curr_state[4] = np.round(msg.twist.linear.y, decimals=2)
-    curr_state[5] = np.round(msg.twist.linear.z, decimals=2)
+    curr_state[3] = msg.twist.linear.x
+    curr_state[4] = msg.twist.linear.y
+    curr_state[5] = msg.twist.linear.z
 
 def accel_cb(msg):
     global curr_state
-    curr_state[6] = np.round(msg.accel.accel.linear.x, decimals=2)
-    curr_state[7] = np.round(msg.accel.accel.linear.y, decimals=2)
-    curr_state[8] = np.round(msg.accel.accel.linear.z, decimals=2)
+    #curr_state[6] = msg.accel.accel.linear.x
+    #curr_state[7] = msg.accel.accel.linear.y
+    #curr_state[8] = msg.accel.accel.linear.z - 9.81
+    curr_state[6] = msg.linear_acceleration.x
+    curr_state[7] = msg.linear_acceleration.y
+    curr_state[8] = msg.linear_acceleration.z - 9.81
     
 def pose_setpoint_cb(msg):
     global waypoints
     global curr_state
     global ocp_solver
+    global N_horizon
     desired = np.zeros(3)
     desired[0] = msg.x
     desired[1] = msg.y
@@ -225,8 +262,38 @@ def set_mpc_target_pos(pos, nx, nu, N_horizon):
     yref_e = np.zeros((nx, ))
     yref_e[0:3] = pos
     
-    for i in range(N_horizon):
+    lbx = np.ones(3)*-2
+    lbx_0 = np.zeros(9)
+    lbx_0[0:3] = curr_state[0:3]
+    lbx_0[3:6] = lbx
+    lbx_0[6:9] = curr_state[6:9]
+    
+    
+    ubx = np.ones(3) * 2
+    ubx_0 = np.zeros(9)
+    ubx_0[0:3] = curr_state[0:3]
+    ubx_0[3:6] = ubx
+    ubx_0[6:9] = curr_state[6:9]
+    
+    
+    
+    
+    
+    ocp_solver.cost_set(0, 'yref', yref)
+    ocp_solver.constraints_set(0, 'lbx', lbx_0)
+    ocp_solver.constraints_set(0, 'ubx', ubx_0)
+    
+    
+    
+    
+    for i in range(1, N_horizon):
         ocp_solver.cost_set(i, 'yref', yref)
+        ocp_solver.constraints_set(i, 'lbx', lbx)
+        ocp_solver.constraints_set(i, 'ubx', ubx)
+        
+    
+    ocp_solver.constraints_set(N_horizon, 'lbx', lbx)
+    ocp_solver.constraints_set(N_horizon, 'ubx', ubx)
     ocp_solver.cost_set(N_horizon, 'y_ref', yref_e)
     
     
@@ -279,38 +346,25 @@ if __name__ == "__main__":
     state_sub = rospy.Subscriber("mavros/state", State, callback = state_cb)
     pos_sub = rospy.Subscriber("mavros/local_position/pose", PoseStamped, callback = pose_cb)
     vel_sub = rospy.Subscriber("mavros/local_position/velocity_local", TwistStamped, callback = vel_cb)
-    accel_sub = rospy.Subscriber("mavros/local_position/accel", AccelWithCovarianceStamped, callback = accel_cb)
+    #accel_sub = rospy.Subscriber("mavros/local_position/accel", AccelWithCovarianceStamped, callback = accel_cb)
+    accel_sub = rospy.Subscriber("mavros/imu/data", Imu, callback = accel_cb)
     pose_setpoint_sub = rospy.Subscriber("input/poseSetpoint", Vector3, callback = pose_setpoint_cb)
 
-    local_pos_pub = rospy.Publisher("mavros/setpoint_position/local", PoseStamped, queue_size=10)
+    #local_pos_pub = rospy.Publisher("mavros/setpoint_position/local", PoseStamped, queue_size=10)
     local_accel_pub = rospy.Publisher("mavros/setpoint_accel/accel", Vector3Stamped, queue_size=10)
-
+    
     rospy.wait_for_service("/mavros/cmd/arming")
     arming_client = rospy.ServiceProxy("mavros/cmd/arming", CommandBool)
 
     rospy.wait_for_service("/mavros/set_mode")
     set_mode_client = rospy.ServiceProxy("mavros/set_mode", SetMode)
-
     
     
-    
-    # OCP setup
-    global curr_state
-    curr_state = np.zeros(9)
-    x0 = curr_state
-
-    aMax = 3
-    vMax = 5
-
-    Tf = 2
-    N_horizon = 20
-
-    ocp_solver = setup(x0, aMax, vMax, N_horizon, Tf)
     
 
 
     # Setpoint publishing MUST be faster than 2Hz
-    rate = rospy.Rate(20)
+    rate = rospy.Rate(10)
 
     # Wait for Flight Controller connection
     while(not rospy.is_shutdown() and not current_state.connected):
@@ -322,6 +376,7 @@ if __name__ == "__main__":
     waypoints = []
     checker = True
     accel = Vector3Stamped()
+   
     
     # Send a few setpoints before starting
     for i in range(100):
@@ -352,7 +407,7 @@ if __name__ == "__main__":
     
     
     counter = 0
-    final = np.zeros(3)
+    
     
     while(not rospy.is_shutdown()):
     
@@ -383,18 +438,27 @@ if __name__ == "__main__":
         #       
         #        set_mpc_target_pos2(final, 9, 3, N_horizon, last=True)
         
-        
+        print('Current State: ', curr_state)
             
-        print('slack sl: ', ocp_solver.get(20, 'sl'))
-        print('slack su: ', ocp_solver.get(20, 'su'))
-        
+        #print('slack sl: ', ocp_solver.get(20, 'sl'))
+        #print('slack su: ', ocp_solver.get(20, 'su'))
+        #print(ocp_solver.get_from_qp_in(1, 'lbx'))
+        #print(ocp_solver.get_from_qp_in(1, 'ubx'))
         U = ocp_solver.solve_for_x0(x0_bar = curr_state)
         
-            
+        #print('Acceleration Setpoint: ', U) 
+        
+        
+        
+        
         accel.vector.x = U[0]
         accel.vector.y = U[1]
         accel.vector.z = U[2]
+        
+        
+        
         #local_pos_pub.publish(pose)
         local_accel_pub.publish(accel)
+        
         
         rate.sleep()

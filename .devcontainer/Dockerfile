@@ -27,7 +27,7 @@ RUN sudo apt install -y git
 
 RUN sudo apt install -y ros-noetic-mavros ros-noetic-mavros-extras ros-noetic-mavros-msgs
 
-RUN sudo apt install -y python3-tk
+RUN sudo apt install -y python3-tk nano
 
 # Rosdep update
 RUN rosdep update

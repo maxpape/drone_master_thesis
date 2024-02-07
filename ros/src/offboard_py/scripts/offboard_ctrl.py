@@ -67,7 +67,7 @@ class MPC:
         ocp.cost.cost_type = 'NONLINEAR_LS'
         ocp.cost.cost_type_e = 'NONLINEAR_LS'
         
-        Q_mat = np.eye((9))
+        Q_mat = np.zeros((9,9))
         Q_mat[0,0] = 2
         Q_mat[1,1] = 2
         Q_mat[2,2] = 2
@@ -92,17 +92,17 @@ class MPC:
         ocp.constraints.lbu = np.array([-aMax, -aMax, -aMax])
         ocp.constraints.ubu = np.array([+aMax, +aMax, +aMax])
     
-        ocp.constraints.lbx = np.array([-vMax, -vMax, -vMax])
-        ocp.constraints.ubx = np.array([+vMax, +vMax, +vMax])
+        ocp.constraints.lbx = np.array([-vMax, -vMax, -vMax, -aMax, -aMax, -aMax])
+        ocp.constraints.ubx = np.array([+vMax, +vMax, +vMax, +aMax, +aMax, +aMax])
     
-        ocp.constraints.lbx_e = np.array([-vMax, -vMax, -vMax])
-        ocp.constraints.ubx_e = np.array([+vMax, +vMax, +vMax])
+        #ocp.constraints.lbx_e = np.array([-vMax, -vMax, -vMax, -aMax, -aMax, -aMax])
+        #ocp.constraints.ubx_e = np.array([+vMax, +vMax, +vMax, +aMax, +aMax, +aMax])
         
         ocp.constraints.x0 = self.current_state
         ocp.constraints.idxbu = np.array([0, 1, 2])
-        ocp.constraints.idxbx = np.array([3, 4, 5])
+        ocp.constraints.idxbx = np.array([3, 4, 5, 6, 7, 8])
     
-        ocp.constraints.idxbx_e = np.array([3,4,5])
+        #ocp.constraints.idxbx_e = np.array([3, 4, 5, 6, 7, 8])
 
 
         # slack for constraints
@@ -111,9 +111,9 @@ class MPC:
         ocp.constraints.idxsbx = np.array([0,1,2])
         #
         ns = 3
-        ocp.cost.zl = 10e-1 * np.ones((ns,)) # gradient wrt lower slack at intermediate shooting nodes (1 to N-1)
+        ocp.cost.zl = 10e-2 * np.ones((ns,)) # gradient wrt lower slack at intermediate shooting nodes (1 to N-1)
         ocp.cost.Zl = np.ones((ns,))    # diagonal of Hessian wrt lower slack at intermediate shooting nodes (1 to N-1)
-        ocp.cost.zu = 10e-1 * np.ones((ns,))    
+        ocp.cost.zu = 10e-2 * np.ones((ns,))    
         ocp.cost.Zu = np.ones((ns,))  
     
         ocp.solver_options.nlp_solver_type = 'SQP_RTI'
@@ -132,8 +132,8 @@ class MPC:
 # variables
 
 current_state = State()
-N_horizon = 50
-Tf = 5
+N_horizon = 100
+Tf = 10
 aMax = 5
 vMax = 5     
 mpc = MPC(N_horizon, Tf, aMax, vMax)
@@ -322,9 +322,6 @@ def vel_cb(msg):
 def accel_cb(msg):
     global mpc
     accel = np.zeros(3)
-    #curr_state[6] = msg.accel.accel.linear.x
-    #curr_state[7] = msg.accel.accel.linear.y
-    #curr_state[8] = msg.accel.accel.linear.z - 9.81
     accel[0] = msg.linear_acceleration.x
     accel[1] = msg.linear_acceleration.y
     accel[2] = msg.linear_acceleration.z - 9.81
@@ -353,32 +350,36 @@ def set_mpc_target_pos():
     yref_e = np.zeros((mpc.nx, ))
     yref_e[0:3] = mpc.pos_setpoint
     
-    #lbx = np.ones(3)*-2
-    #lbx_0 = np.zeros(9)
-    #lbx_0[0:3] = curr_state[0:3]
-    #lbx_0[3:6] = lbx
-    #lbx_0[6:9] = curr_state[6:9]
-    #
-    #
-    #ubx = np.ones(3) * 2
-    #ubx_0 = np.zeros(9)
-    #ubx_0[0:3] = curr_state[0:3]
-    #ubx_0[3:6] = ubx
-    #ubx_0[6:9] = curr_state[6:9]
+    lbx = np.ones(6)*-mpc.vMax
     
+    ubx = np.ones(6)*mpc.vMax
+    
+    
+    #
+    #lbx_0 = np.zeros(9)
+    #lbx_0[0:3] = mpc.current_state[0:3]
+    #lbx_0[3:6] = -mpc.vMax*np.ones(3)
+    #lbx_0[6:9] = -mpc.aMax*np.ones(3)
+    ##
+    ##
+    #ubx_0 = np.zeros(9)
+    #ubx_0[0:3] = mpc.current_state[0:3]
+    #ubx_0[3:6] = mpc.vMax*np.ones(3)
+    #ubx_0[6:9] = mpc.aMax*np.ones(3)
+    #
     mpc.ocp_solver.cost_set(0, 'yref', yref)
-    #ocp_solver.constraints_set(0, 'lbx', lbx_0)
-    #ocp_solver.constraints_set(0, 'ubx', ubx_0)
+    mpc.ocp_solver.constraints_set(0, 'lbx', mpc.current_state)
+    mpc.ocp_solver.constraints_set(0, 'ubx', mpc.current_state)
     
     
     for i in range(1, mpc.N_horizon):
         mpc.ocp_solver.cost_set(i, 'yref', yref)
-        #ocp_solver.constraints_set(i, 'lbx', lbx)
-        #ocp_solver.constraints_set(i, 'ubx', ubx)
+        mpc.ocp_solver.constraints_set(i, 'lbx', lbx)
+        mpc.ocp_solver.constraints_set(i, 'ubx', ubx)
         
     
-    #ocp_solver.constraints_set(N_horizon, 'lbx', lbx)
-    #ocp_solver.constraints_set(N_horizon, 'ubx', ubx)
+    #mpc.ocp_solver.constraints_set(N_horizon, 'ubx', ubx)
+    #mpc.ocp_solver.constraints_set(N_horizon, 'lbx', lbx)
     mpc.ocp_solver.cost_set(mpc.N_horizon, 'y_ref', yref_e)
     
     
@@ -453,9 +454,9 @@ def main():
     
     
     
-    
+    ros_rate = 10
     # Setpoint publishing MUST be faster than 2Hz
-    rate = rospy.Rate(10)
+    rate = rospy.Rate(ros_rate)
 
     # Wait for Flight Controller connection
     while(not rospy.is_shutdown() and not current_state.connected):
@@ -475,8 +476,9 @@ def main():
     velocity = Vector3()
     target = PositionTarget()
     
-    ignore_mask = PositionTarget.IGNORE_PX | PositionTarget.IGNORE_PY | PositionTarget.IGNORE_PZ | PositionTarget.IGNORE_VX | PositionTarget.IGNORE_VY | PositionTarget.IGNORE_AFZ | PositionTarget.IGNORE_YAW | PositionTarget.IGNORE_YAW_RATE
-    
+    #ignore_mask = PositionTarget.IGNORE_PX | PositionTarget.IGNORE_PY | PositionTarget.IGNORE_PZ | PositionTarget.IGNORE_VX | PositionTarget.IGNORE_VY | PositionTarget.IGNORE_AFZ | PositionTarget.IGNORE_YAW | PositionTarget.IGNORE_YAW_RATE
+    ignore_mask = PositionTarget.IGNORE_PX | PositionTarget.IGNORE_PY | PositionTarget.IGNORE_PZ | PositionTarget.IGNORE_VX | PositionTarget.IGNORE_VY | PositionTarget.IGNORE_VZ | PositionTarget.IGNORE_YAW | PositionTarget.IGNORE_YAW_RATE
+        
     target.type_mask = ignore_mask
     target.coordinate_frame = 1
     target.acceleration_or_force = accel
@@ -486,7 +488,6 @@ def main():
         if(rospy.is_shutdown()):
             break
         local_accel_pub.publish(target)
-        #local_pos_pub.publish(pose)
         rate.sleep()
 
     offb_set_mode = SetModeRequest()
@@ -499,13 +500,7 @@ def main():
 
     
     
-    #pos = np.asarray(mpc.current_state[0:3])
-    #pos[0] = pos[0]
-    #pos[1] = pos[1]
-    #pos[2] = pos[2]+5
-          
-          
-    #waypoints = [pos]       
+        
             
     
     
@@ -530,18 +525,8 @@ def main():
 
         
         
-        #if (len(waypoints)) == 0:
-        #    if (check_distance(curr_state[0:3],final, 3 )):
-        #       
-        #        set_mpc_target_pos2(final, 9, 3, N_horizon, last=True)
-        
-        #print('Current State: ', curr_state)
-            
-        #print('slack sl: ', ocp_solver.get(20, 'sl'))
-        #print('slack su: ', ocp_solver.get(20, 'su'))
-        #print(ocp_solver.get_from_qp_in(1, 'lbx'))
-        #print(ocp_solver.get_from_qp_in(1, 'ubx'))
-        U = mpc.ocp_solver.solve_for_x0(x0_bar = mpc.current_state)
+        st = mpc.current_state
+        U = mpc.ocp_solver.solve_for_x0(x0_bar = st)
         
         counter += 1
         if counter == 20:
@@ -549,13 +534,8 @@ def main():
             print('Current state: ', mpc.current_state)
             print('Current cost: ', mpc.ocp_solver.get_cost())
             print('Acceleration Setpoint: ', U)
+            #mpc.ocp_solver.store_iterate(filename= 'result', overwrite=True)
             counter = 0
-        
-        
-         
-        
-        #print("optimal U: ", np.round(U, decimals=1))
-        #print('current postition: ', np.round(mpc.current_state[0:3], decimals=1))
         
         
         
@@ -563,19 +543,20 @@ def main():
         accel.y = U[1]
         accel.z = U[2]
         
-        velocity.x = 0
-        velocity.y = 0
-        velocity.z = mpc.current_state[5] + U[2]/10
+        #velocity.x = 0
+        #velocity.y = 0
+        #velocity.z = mpc.current_state[5] + U[2]/ros_rate
         
         
         target.coordinate_frame = 1
+        ignore_mask = PositionTarget.IGNORE_PX | PositionTarget.IGNORE_PY | PositionTarget.IGNORE_PZ | PositionTarget.IGNORE_VX | PositionTarget.IGNORE_VY | PositionTarget.IGNORE_VZ | PositionTarget.IGNORE_YAW | PositionTarget.IGNORE_YAW_RATE
         target.type_mask = ignore_mask
         target.acceleration_or_force = accel
-        target.velocity = velocity
+        #target.velocity = velocity
         
         
         
-        #local_pos_pub.publish(pose)
+        
         local_accel_pub.publish(target)
         
         

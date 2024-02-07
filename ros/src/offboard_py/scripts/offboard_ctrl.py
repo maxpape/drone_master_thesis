@@ -92,15 +92,15 @@ class MPC:
         ocp.constraints.lbu = np.array([-aMax, -aMax, -aMax])
         ocp.constraints.ubu = np.array([+aMax, +aMax, +aMax])
     
-        ocp.constraints.lbx = np.array([-vMax, -vMax, -vMax, -aMax, -aMax, -aMax])
-        ocp.constraints.ubx = np.array([+vMax, +vMax, +vMax, +aMax, +aMax, +aMax])
+        ocp.constraints.lbx = np.array([-vMax, -vMax, -vMax])
+        ocp.constraints.ubx = np.array([+vMax, +vMax, +vMax])
     
         #ocp.constraints.lbx_e = np.array([-vMax, -vMax, -vMax, -aMax, -aMax, -aMax])
         #ocp.constraints.ubx_e = np.array([+vMax, +vMax, +vMax, +aMax, +aMax, +aMax])
         
         ocp.constraints.x0 = self.current_state
         ocp.constraints.idxbu = np.array([0, 1, 2])
-        ocp.constraints.idxbx = np.array([3, 4, 5, 6, 7, 8])
+        ocp.constraints.idxbx = np.array([3, 4, 5])
     
         #ocp.constraints.idxbx_e = np.array([3, 4, 5, 6, 7, 8])
 
@@ -111,9 +111,9 @@ class MPC:
         ocp.constraints.idxsbx = np.array([0,1,2])
         #
         ns = 3
-        ocp.cost.zl = 10e-2 * np.ones((ns,)) # gradient wrt lower slack at intermediate shooting nodes (1 to N-1)
+        ocp.cost.zl = 10e-1 * np.ones((ns,)) # gradient wrt lower slack at intermediate shooting nodes (1 to N-1)
         ocp.cost.Zl = np.ones((ns,))    # diagonal of Hessian wrt lower slack at intermediate shooting nodes (1 to N-1)
-        ocp.cost.zu = 10e-2 * np.ones((ns,))    
+        ocp.cost.zu = 10e-1 * np.ones((ns,))    
         ocp.cost.Zu = np.ones((ns,))  
     
         ocp.solver_options.nlp_solver_type = 'SQP_RTI'
@@ -132,101 +132,15 @@ class MPC:
 # variables
 
 current_state = State()
-N_horizon = 100
-Tf = 10
+N_horizon = 50
+Tf = 5
 aMax = 5
 vMax = 5     
 mpc = MPC(N_horizon, Tf, aMax, vMax)
 mpc.setup_mpc()
 
 
-def setup(x0, aMax, vMax, N_horizon, Tf):
-    # create ocp object to formulate the OCP
-    ocp = AcadosOcp()
 
-    # set model
-    model = export_drone_ode_model()
-    ocp.model = model
-
-    nx = model.x.size()[0]
-    nu = model.u.size()[0]
-    ny = nx + nu
-    ny_e = nx
-
-    ocp.dims.N = N_horizon
-
-    # set cost module
-    ocp.cost.cost_type = 'NONLINEAR_LS'
-    ocp.cost.cost_type_e = 'NONLINEAR_LS'
-
-    
-    Q_mat = np.eye((9))
-    Q_mat[0,0] = 2
-    Q_mat[1,1] = 2
-    Q_mat[2,2] = 2
-    
-    R_mat = np.eye(3)
-
-    ocp.cost.W = scipy.linalg.block_diag(Q_mat, R_mat)
-    ocp.cost.W_e = Q_mat
-
-    ocp.model.cost_y_expr = vertcat(model.x, model.u)
-    ocp.model.cost_y_expr_e = model.x
-    
-    
-    
-    yref = np.zeros((ny, ))
-    ocp.cost.yref  = yref
-    
-    yref_e = np.zeros((ny_e, ))
-    ocp.cost.yref_e = yref_e
-
-    
-
-    # set constraints
-    ocp.constraints.lbu = np.array([-aMax, -aMax, -aMax])
-    ocp.constraints.ubu = np.array([+aMax, +aMax, +aMax])
-    
-    ocp.constraints.lbx = np.array([-vMax, -vMax, -vMax])
-    ocp.constraints.ubx = np.array([+vMax, +vMax, +vMax])
-    
-    ocp.constraints.lbx_e = np.array([-vMax, -vMax, -vMax])
-    ocp.constraints.ubx_e = np.array([+vMax, +vMax, +vMax])
-    
- 
-    ocp.constraints.x0 = x0
-    ocp.constraints.idxbu = np.array([0, 1, 2])
-    ocp.constraints.idxbx = np.array([3, 4, 5])
-    
-    ocp.constraints.idxbx_e = np.array([3,4,5])
-
-
-    ## slack for constraints
-    ocp.constraints.lsbx = np.array([-1,-1,-1])
-    ocp.constraints.usbx = np.array([+1,+1,+1])
-    ocp.constraints.idxsbx = np.array([0,1,2])
-    #
-    ns = 3
-    ocp.cost.zl = 10e-1 * np.ones((ns,)) # gradient wrt lower slack at intermediate shooting nodes (1 to N-1)
-    ocp.cost.Zl = np.ones((ns,))    # diagonal of Hessian wrt lower slack at intermediate shooting nodes (1 to N-1)
-    ocp.cost.zu = 10e-1 * np.ones((ns,))    
-    ocp.cost.Zu = np.ones((ns,))  
-    
-
-    
-    ocp.solver_options.nlp_solver_type = 'SQP_RTI'
-    
-
-    ocp.solver_options.qp_solver_cond_N = N_horizon
-
-    # set prediction horizon
-    ocp.solver_options.tf = Tf
-
-    solver_json = 'acados_ocp_' + model.name + '.json'
-    acados_ocp_solver = AcadosOcpSolver(ocp, json_file = solver_json)
-
-
-    return acados_ocp_solver
 
 
 
@@ -340,7 +254,7 @@ def pose_setpoint_cb(msg):
 
     
     
-def set_mpc_target_pos():
+def set_mpc_target_pos2():
     
     global mpc
         
@@ -382,10 +296,29 @@ def set_mpc_target_pos():
     #mpc.ocp_solver.constraints_set(N_horizon, 'lbx', lbx)
     mpc.ocp_solver.cost_set(mpc.N_horizon, 'y_ref', yref_e)
     
+def set_mpc_target_pos():
+    
+    global mpc
+        
+    yref = np.zeros((mpc.nx+mpc.nu, ))
+    yref[0:3] = mpc.pos_setpoint
+    
+    yref_e = np.zeros((mpc.nx, ))
+    yref_e[0:3] = mpc.pos_setpoint
+    
+    
+    print(yref, yref_e)
+    for j in range(mpc.N_horizon):
+        
+        mpc.ocp_solver.set(j, "yref", yref)
+    mpc.ocp_solver.set(mpc.N_horizon, "yref", yref_e)
+        
+    
+    
     
 
 
-def set_mpc_target_pos2(points, nx, nu, N_horizon):
+def set_mpc_target_pos3(points, nx, nu, N_horizon):
     
     
     global ocp_solver
@@ -528,17 +461,17 @@ def main():
         st = mpc.current_state
         U = mpc.ocp_solver.solve_for_x0(x0_bar = st)
         
-        counter += 1
-        if counter == 20:
-            print('Current pos_setpoint: ', mpc.pos_setpoint)
-            print('Current state: ', mpc.current_state)
-            print('Current cost: ', mpc.ocp_solver.get_cost())
-            print('Acceleration Setpoint: ', U)
-            #mpc.ocp_solver.store_iterate(filename= 'result', overwrite=True)
-            counter = 0
+        #counter += 1
+        #if counter == 20:
+        #    print('Current pos_setpoint: ', np.round(mpc.pos_setpoint, decimals=2))
+        #    print('Current state: ',        np.round(mpc.current_state, decimals=2))
+        #    print('Current cost: ',         np.round(mpc.ocp_solver.get_cost(), decimals=2))
+        #    print('Acceleration Setpoint: ', np.round(U, decimals=2))
+        #    #mpc.ocp_solver.store_iterate(filename= 'result', overwrite=True)
+        #    counter = 0
         
         
-        
+        print('Acceleration Setpoint: ', np.round(U, decimals=2))
         accel.x = U[0]
         accel.y = U[1]
         accel.z = U[2]

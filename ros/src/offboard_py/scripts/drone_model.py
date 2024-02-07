@@ -83,15 +83,26 @@ def export_drone_ode_model() -> AcadosModel:
     #                 (a_z_set - a_z - 0.6 * v_z)*3
     #                 )
     
+    #f_expl = vertcat(v_x,
+    #                 v_y,
+    #                 v_z,
+    #                 a_x,
+    #                 a_y,
+    #                 a_z,
+    #                 (a_x_set - a_x*0.2)*0.1,
+    #                 (a_y_set - a_y*0.2)*0.1,
+    #                 (a_z_set - a_z*0.2)*0.1
+    #                 )
+    #
     f_expl = vertcat(v_x,
                      v_y,
                      v_z,
                      a_x,
                      a_y,
                      a_z,
-                     (a_x_set - a_x*0.2)*0.1,
-                     (a_y_set - a_y*0.2)*0.1,
-                     (a_z_set - a_z*0.2)*0.1
+                     (a_x_set - a_x)*3,
+                     (a_y_set - a_y)*3,
+                     (a_z_set - a_z)*3
                      )
 
     f_impl = xdot - f_expl

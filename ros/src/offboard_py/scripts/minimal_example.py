@@ -56,7 +56,7 @@ def setup(x0, aMax, vMax, N_horizon, Tf, RTI=False):
     ocp.cost.cost_type_e = 'NONLINEAR_LS'
 
     
-    Q_mat = np.eye(9)
+    Q_mat = np.zeros((9,9))
     Q_mat[0,0] = 2
     Q_mat[1,1] = 2
     Q_mat[2,2] = 2
@@ -68,7 +68,7 @@ def setup(x0, aMax, vMax, N_horizon, Tf, RTI=False):
 
     ocp.model.cost_y_expr = vertcat(model.x, model.u)
     ocp.model.cost_y_expr_e = model.x
-    desired = np.asarray([10, 10, 10])
+    desired = np.asarray([0, 0, 0])
     
     yref = np.zeros((ny, ))
     yref[0:3] = desired
@@ -83,13 +83,13 @@ def setup(x0, aMax, vMax, N_horizon, Tf, RTI=False):
     # set constraints
     ocp.constraints.lbu = np.array([-aMax, -aMax, -aMax])
     ocp.constraints.ubu = np.array([+aMax, +aMax, +aMax])
-    
-    ocp.constraints.lbx = np.array([-vMax, -vMax, -vMax])
-    ocp.constraints.ubx = np.array([+vMax, +vMax, +vMax])
+        
+    ocp.constraints.lbx = np.array([-vMax, -vMax, -vMax, -aMax, -aMax, -aMax])
+    ocp.constraints.ubx = np.array([+vMax, +vMax, +vMax, +vMax, +aMax, +aMax])
 
     ocp.constraints.x0 = x0
     ocp.constraints.idxbu = np.array([0, 1, 2])
-    ocp.constraints.idxbx = np.array([3, 4, 5])
+    ocp.constraints.idxbx = np.array([3, 4, 5, 6, 7, 8])
 
     #ocp.solver_options.qp_solver = 'PARTIAL_CONDENSING_HPIPM' # FULL_CONDENSING_QPOASES
     #ocp.solver_options.hessian_approx = 'GAUSS_NEWTON'
@@ -97,7 +97,7 @@ def setup(x0, aMax, vMax, N_horizon, Tf, RTI=False):
     #ocp.solver_options.sim_method_newton_iter = 10
 
     
-    ocp.solver_options.nlp_solver_type = 'SQP_RTI'
+    ocp.solver_options.nlp_solver_type = 'SQP'
     
     
 
@@ -117,9 +117,9 @@ def setup(x0, aMax, vMax, N_horizon, Tf, RTI=False):
 
 def main(use_RTI=False):
 
-    x0 = np.array([14.03, 0.657, -5.1, 3, 3, 3, 0, 0, 0])
+    x0 = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0])
     aMax = 4
-    vMax = 3
+    vMax = 10
 
     Tf = 5
     N_horizon = 50
@@ -141,13 +141,23 @@ def main(use_RTI=False):
     t_preparation = np.zeros((Nsim))
     t_feedback = np.zeros((Nsim))
 
-    # do some initial iterations to start with a good initial guess
     
 
     # closed loop
     for i in range(Nsim):
 
         
+            
+        if i == 30 :
+            
+            for j in range(N_horizon):
+                yref = np.array([100, 100, 100, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+                ocp_solver.set(j, "yref", yref)
+            yref_N = np.array([1, 1, 1, 0, 0, 0, 0, 0, 0])
+            ocp_solver.set(N_horizon, "yref", yref_N)
+        
+        #ocp_solver.set(0, "lbx", simX[i, :])
+        #ocp_solver.set(0, "ubx", simX[i, :])
         # solve ocp and get next control input
         simU[i,:] = ocp_solver.solve_for_x0(x0_bar = simX[i, :])
 
@@ -156,24 +166,14 @@ def main(use_RTI=False):
         # simulate system
         simX[i+1, :] = integrator.simulate(x=simX[i, :], u=simU[i,:])
 
-    # evaluate timings
-    if use_RTI:
-        # scale to milliseconds
-        t_preparation *= 1000
-        t_feedback *= 1000
-        print(f'Computation time in preparation phase in ms: \
-                min {np.min(t_preparation):.3f} median {np.median(t_preparation):.3f} max {np.max(t_preparation):.3f}')
-        print(f'Computation time in feedback phase in ms:    \
-                min {np.min(t_feedback):.3f} median {np.median(t_feedback):.3f} max {np.max(t_feedback):.3f}')
-    else:
-        # scale to milliseconds
-        t *= 1000
-        print(f'Computation time in ms: min {np.min(t):.3f} median {np.median(t):.3f} max {np.max(t):.3f}')
+    
 
     # plot results
-    #plot_pendulum(np.linspace(0, (Tf/N_horizon)*Nsim, Nsim+1), aMax, simU, simX)
+    
+
     plot_drone(Nsim, Tf, simX, simU)
     ocp_solver = None
+    integrator = None
 
 
 if __name__ == '__main__':

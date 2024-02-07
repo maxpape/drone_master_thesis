@@ -262,38 +262,38 @@ def set_mpc_target_pos(pos, nx, nu, N_horizon):
     yref_e = np.zeros((nx, ))
     yref_e[0:3] = pos
     
-    lbx = np.ones(3)*-2
-    lbx_0 = np.zeros(9)
-    lbx_0[0:3] = curr_state[0:3]
-    lbx_0[3:6] = lbx
-    lbx_0[6:9] = curr_state[6:9]
-    
-    
-    ubx = np.ones(3) * 2
-    ubx_0 = np.zeros(9)
-    ubx_0[0:3] = curr_state[0:3]
-    ubx_0[3:6] = ubx
-    ubx_0[6:9] = curr_state[6:9]
+    #lbx = np.ones(3)*-2
+    #lbx_0 = np.zeros(9)
+    #lbx_0[0:3] = curr_state[0:3]
+    #lbx_0[3:6] = lbx
+    #lbx_0[6:9] = curr_state[6:9]
+    #
+    #
+    #ubx = np.ones(3) * 2
+    #ubx_0 = np.zeros(9)
+    #ubx_0[0:3] = curr_state[0:3]
+    #ubx_0[3:6] = ubx
+    #ubx_0[6:9] = curr_state[6:9]
     
     
     
     
     
     ocp_solver.cost_set(0, 'yref', yref)
-    ocp_solver.constraints_set(0, 'lbx', lbx_0)
-    ocp_solver.constraints_set(0, 'ubx', ubx_0)
+    #ocp_solver.constraints_set(0, 'lbx', lbx_0)
+    #ocp_solver.constraints_set(0, 'ubx', ubx_0)
     
     
     
     
     for i in range(1, N_horizon):
         ocp_solver.cost_set(i, 'yref', yref)
-        ocp_solver.constraints_set(i, 'lbx', lbx)
-        ocp_solver.constraints_set(i, 'ubx', ubx)
+        #ocp_solver.constraints_set(i, 'lbx', lbx)
+        #ocp_solver.constraints_set(i, 'ubx', ubx)
         
     
-    ocp_solver.constraints_set(N_horizon, 'lbx', lbx)
-    ocp_solver.constraints_set(N_horizon, 'ubx', ubx)
+    #ocp_solver.constraints_set(N_horizon, 'lbx', lbx)
+    #ocp_solver.constraints_set(N_horizon, 'ubx', ubx)
     ocp_solver.cost_set(N_horizon, 'y_ref', yref_e)
     
     
@@ -351,7 +351,10 @@ if __name__ == "__main__":
     pose_setpoint_sub = rospy.Subscriber("input/poseSetpoint", Vector3, callback = pose_setpoint_cb)
 
     #local_pos_pub = rospy.Publisher("mavros/setpoint_position/local", PoseStamped, queue_size=10)
-    local_accel_pub = rospy.Publisher("mavros/setpoint_accel/accel", Vector3Stamped, queue_size=10)
+    #local_accel_pub = rospy.Publisher("mavros/setpoint_accel/accel", Vector3Stamped, queue_size=10)
+    local_accel_pub = rospy.Publisher("mavros/setpoint_raw/local", PositionTarget, queue_size=10)
+    
+    
     
     rospy.wait_for_service("/mavros/cmd/arming")
     arming_client = rospy.ServiceProxy("mavros/cmd/arming", CommandBool)
@@ -375,14 +378,20 @@ if __name__ == "__main__":
     
     waypoints = []
     checker = True
-    accel = Vector3Stamped()
-   
+    accel = Vector3()
+    target = PositionTarget()
+    
+    ignore_mask = PositionTarget.IGNORE_PX | PositionTarget.IGNORE_PY | PositionTarget.IGNORE_PZ | PositionTarget.IGNORE_VX | PositionTarget.IGNORE_VY | PositionTarget.IGNORE_VZ
+    
+    target.type_mask = 3135
+    target.coordinate_frame = 1
+    target.acceleration_or_force = accel
     
     # Send a few setpoints before starting
     for i in range(100):
         if(rospy.is_shutdown()):
             break
-        local_accel_pub.publish(accel)
+        local_accel_pub.publish(target)
         #local_pos_pub.publish(pose)
         rate.sleep()
 
@@ -424,12 +433,12 @@ if __name__ == "__main__":
 
                 last_req = rospy.Time.now()
 
-        counter += 1
-        if counter == 20:
-            print('Current position: ', np.round(curr_state[0:3], decimals=1))
-            print('Current cost: ', ocp_solver.get_cost())
-            
-            counter = 0
+        #counter += 1
+        #if counter == 20:
+        #    print('Current position: ', np.round(curr_state[0:3], decimals=1))
+        #    print('Current cost: ', ocp_solver.get_cost())
+        #    
+        #    counter = 0
 
         
         
@@ -438,7 +447,7 @@ if __name__ == "__main__":
         #       
         #        set_mpc_target_pos2(final, 9, 3, N_horizon, last=True)
         
-        print('Current State: ', curr_state)
+        #print('Current State: ', curr_state)
             
         #print('slack sl: ', ocp_solver.get(20, 'sl'))
         #print('slack su: ', ocp_solver.get(20, 'su'))
@@ -448,17 +457,23 @@ if __name__ == "__main__":
         
         #print('Acceleration Setpoint: ', U) 
         
+        print("optimal U: ", np.round(U, decimals=1))
+        print('current postition: ', np.round(curr_state[0:3], decimals=1))
         
         
         
-        accel.vector.x = U[0]
-        accel.vector.y = U[1]
-        accel.vector.z = U[2]
+        accel.x = U[0]
+        accel.y = U[1]
+        accel.z = U[2]
+        
+        target.coordinate_frame = 1
+        target.type_mask = 3135
+        target.acceleration_or_force = accel
         
         
         
         #local_pos_pub.publish(pose)
-        local_accel_pub.publish(accel)
+        local_accel_pub.publish(target)
         
         
         rate.sleep()

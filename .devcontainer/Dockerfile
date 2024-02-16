@@ -43,4 +43,9 @@ RUN sudo ./install_geographiclib_datasets.sh
 
 RUN sudo chmod +x ubuntu.sh
 
-#RUN sudo ./ubuntu.sh
+RUN echo "source /opt/ros/noetic/setup.bash" >> ~/.bashrc
+RUN echo "source /drone_master_thesis/PX4-Autopilot/Tools/simulation/gazebo-classic/setup_gazebo.bash /drone_master_thesis/PX4-Autopilot /drone_master_thesis/PX4-Autopilot/build/px4_sitl_default" >> ~/.bashrc
+RUN echo "export ROS_PACKAGE_PATH=$ROS_PACKAGE_PATH:/drone_master_thesis/PX4-Autopilot" >> ~/.bashrc
+RUN echo "export ROS_PACKAGE_PATH=$ROS_PACKAGE_PATH:/drone_master_thesis/PX4-Autopilot/Tools/simulation/gazebo-classic/sitl_gazebo-classic" >> ~/.bashrc
+RUN echo "export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/drone_master_thesis/acados/lib " >> ~/.bashrc
+RUN echo "export ACADOS_SOURCE_DIR=/drone_master_thesis/acados "

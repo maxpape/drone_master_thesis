@@ -97,7 +97,7 @@ def setup(x0, aMax, vMax, N_horizon, Tf, RTI=False):
     #ocp.solver_options.sim_method_newton_iter = 10
 
     
-    ocp.solver_options.nlp_solver_type = 'SQP'
+    ocp.solver_options.nlp_solver_type = 'SQP_RTI'
     
     
 
@@ -118,11 +118,11 @@ def setup(x0, aMax, vMax, N_horizon, Tf, RTI=False):
 def main(use_RTI=False):
 
     x0 = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0])
-    aMax = 4
-    vMax = 10
+    aMax = 2
+    vMax = 2
 
     Tf = 5
-    N_horizon = 50
+    N_horizon = 100
 
     ocp_solver, integrator = setup(x0, aMax, vMax, N_horizon, Tf, use_RTI)
 
@@ -147,20 +147,51 @@ def main(use_RTI=False):
     for i in range(Nsim):
 
         
+         
+         
+        
+         
+         
+        if i == 1 :
             
-        if i == 30 :
+            
             
             for j in range(N_horizon):
-                yref = np.array([100, 100, 100, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+                yref = np.array([50, 50, 50, 0, 0, 0, 0, 0, 0, 0, 0, 0])
                 ocp_solver.set(j, "yref", yref)
-            yref_N = np.array([1, 1, 1, 0, 0, 0, 0, 0, 0])
+                
+            
+            
+            yref_N = np.array([50, 50, 50, 0, 0, 0, 0, 0, 0])
+            ocp_solver.set(N_horizon, "yref", yref_N)  
+         
+           
+        if i == 50 :
+            
+            lbx = np.asarray([-6, -6, -6, -10, -10, -10])
+            ubx = np.asarray([6, 6, 6, 10, 10, 10])
+            
+            for j in range(N_horizon):
+                yref = np.array([108, 108, 108, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+                ocp_solver.set(j, "yref", yref)
+                
+            
+            ocp_solver.set(0, "lbx", simX[i, :])
+            ocp_solver.set(0, "ubx", simX[i, :])   
+            for j in range(1, N_horizon):
+                ocp_solver.set(j, "lbx", lbx[0:6])
+                ocp_solver.set(j, "ubx", ubx[0:6])
+            yref_N = np.array([108, 108, 108, 0, 0, 0, 0, 0, 0])
             ocp_solver.set(N_horizon, "yref", yref_N)
         
         #ocp_solver.set(0, "lbx", simX[i, :])
         #ocp_solver.set(0, "ubx", simX[i, :])
         # solve ocp and get next control input
-        simU[i,:] = ocp_solver.solve_for_x0(x0_bar = simX[i, :])
-
+        ocp_solver.set(0, "lbx", simX[i, :])
+        ocp_solver.set(0, "ubx", simX[i, :]) 
+        status = ocp_solver.solve()
+        #simU[i,:] = ocp_solver.solve_for_x0(x0_bar = simX[i, :])
+        simU[i,:] = ocp_solver.get(0, "u")
         t[i] = ocp_solver.get_stats('time_tot')
 
         # simulate system

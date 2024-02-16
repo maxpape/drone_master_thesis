@@ -67,7 +67,7 @@ class MPC:
         ocp.cost.cost_type = 'NONLINEAR_LS'
         ocp.cost.cost_type_e = 'NONLINEAR_LS'
         
-        Q_mat = np.zeros((9,9))
+        Q_mat = np.eye((9))
         Q_mat[0,0] = 2
         Q_mat[1,1] = 2
         Q_mat[2,2] = 2
@@ -92,22 +92,19 @@ class MPC:
         ocp.constraints.lbu = np.array([-aMax, -aMax, -aMax])
         ocp.constraints.ubu = np.array([+aMax, +aMax, +aMax])
     
-        ocp.constraints.lbx = np.array([-vMax, -vMax, -vMax])
-        ocp.constraints.ubx = np.array([+vMax, +vMax, +vMax])
-    
-        #ocp.constraints.lbx_e = np.array([-vMax, -vMax, -vMax, -aMax, -aMax, -aMax])
-        #ocp.constraints.ubx_e = np.array([+vMax, +vMax, +vMax, +aMax, +aMax, +aMax])
-        
+        ocp.constraints.lbx = np.array([-vMax, -vMax, -vMax, -aMax, -aMax, -aMax])
+        ocp.constraints.ubx = np.array([+vMax, +vMax, +vMax, +aMax, +aMax, +aMax])
+            
         ocp.constraints.x0 = self.current_state
         ocp.constraints.idxbu = np.array([0, 1, 2])
-        ocp.constraints.idxbx = np.array([3, 4, 5])
+        ocp.constraints.idxbx = np.array([3, 4, 5, 6, 7, 8])
     
-        #ocp.constraints.idxbx_e = np.array([3, 4, 5, 6, 7, 8])
+        
 
 
         # slack for constraints
-        ocp.constraints.lsbx = np.array([-1,-1,-1])
-        ocp.constraints.usbx = np.array([+1,+1,+1])
+        ocp.constraints.lsbx = np.array([-2,-2,-2])
+        ocp.constraints.usbx = np.array([+2,+2,+2])
         ocp.constraints.idxsbx = np.array([0,1,2])
         #
         ns = 3
@@ -312,7 +309,20 @@ def set_mpc_target_pos():
         
         mpc.ocp_solver.set(j, "yref", yref)
     mpc.ocp_solver.set(mpc.N_horizon, "yref", yref_e)
+    
+    
+    
+    lbx = np.asarray([-5, -5, -5, -5, -5, -5])
+    ubx = np.asarray([+5, +5, +5, +5, +5, +5])
+    
+    
         
+    
+    mpc.ocp_solver.set(0, "lbx", mpc.current_state)
+    mpc.ocp_solver.set(0, "ubx", mpc.current_state)   
+    for j in range(1, N_horizon):
+        mpc.ocp_solver.set(j, "lbx", lbx)
+        mpc.ocp_solver.set(j, "ubx", ubx)
     
     
     
@@ -373,7 +383,6 @@ def main():
     accel_sub = rospy.Subscriber("mavros/imu/data", Imu, callback = accel_cb)
     pose_setpoint_sub = rospy.Subscriber("input/poseSetpoint", Vector3, callback = pose_setpoint_cb)
 
-    #local_pos_pub = rospy.Publisher("mavros/setpoint_position/local", PoseStamped, queue_size=10)
     #local_accel_pub = rospy.Publisher("mavros/setpoint_accel/accel", Vector3Stamped, queue_size=10)
     local_accel_pub = rospy.Publisher("mavros/setpoint_raw/local", PositionTarget, queue_size=10)
     
@@ -459,8 +468,37 @@ def main():
         
         
         st = mpc.current_state
-        U = mpc.ocp_solver.solve_for_x0(x0_bar = st)
         
+        
+        
+        
+        lbx = np.asarray([-5, -5, -5, -5, -5, -5])
+        ubx = np.asarray([+5, +5, +5, +5, +5, +5])
+        
+        mpc.ocp_solver.set(0, "lbx", st)
+        mpc.ocp_solver.set(0, "ubx", st)
+        for j in range(1, mpc.N_horizon):
+            mpc.ocp_solver.set(j, "lbx", lbx)
+            mpc.ocp_solver.set(j, "ubx", ubx)
+        
+        
+        
+        
+        status = mpc.ocp_solver.solve()
+        #U = mpc.ocp_solver.solve_for_x0(x0_bar = st)
+        
+        states = np.zeros((mpc.N_horizon, 9))
+        
+        for j in range(mpc.N_horizon):
+            states[j] = mpc.ocp_solver.get(j, 'x')
+        
+            
+        #print('state at 5:', states[5][3:7])
+        #print('lam: ', mpc.ocp_solver.get_from_qp_in(5, 'lbx'))
+            
+        
+        
+        U = mpc.ocp_solver.get(0, 'u')
         #counter += 1
         #if counter == 20:
         #    print('Current pos_setpoint: ', np.round(mpc.pos_setpoint, decimals=2))

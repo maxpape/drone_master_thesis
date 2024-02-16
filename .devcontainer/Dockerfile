@@ -43,4 +43,4 @@ RUN sudo ./install_geographiclib_datasets.sh
 
 RUN sudo chmod +x ubuntu.sh
 
-RUN sudo ./ubuntu.sh
+#RUN sudo ./ubuntu.sh

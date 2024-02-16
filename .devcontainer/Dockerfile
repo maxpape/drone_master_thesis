@@ -25,7 +25,7 @@ RUN sudo apt install wget
 # Install Git
 RUN sudo apt install -y git
 
-RUN sudo apt install -y ros-noetic-mavros ros-noetic-mavros-extras ros-noetic-mavros-msgs
+RUN sudo apt install -y ros-noetic-mavros ros-noetic-mavros-extras ros-noetic-mavros-msgs libgstreamer-plugins-base1.0-dev
 
 RUN sudo apt install -y python3-tk nano python3-catkin-tools
 

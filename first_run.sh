@@ -1,5 +1,14 @@
 #!/bin/bash
+
+
 git submodule update --init --recursive
+
+bash ./PX4-Autopilot/Tools/setup/ubuntu.sh --no-sim-tools --no-nuttx
+cd PX4-Autopilot
+make px4_sitl gazebo-classic
+
+cd ./..
+
 pip install virtualenv
 
 virtualenv acados_env

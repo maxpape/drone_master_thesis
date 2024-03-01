@@ -1,0 +1,99 @@
+<?xml version="1.0"?>
+<sdf version="1.6">
+  <model name="force_sensor">
+      <link name="force_sensor_base">
+        <pose>0 0 0 0 0 0</pose>
+        <inertial>
+          <inertia>
+            <ixx>0.00000004</ixx>
+            <ixy>0.000000</ixy>
+            <ixz>0.00000004</ixz>
+            <iyy>0.00</iyy>
+            <iyz>0.0000000</iyz>
+            <izz>0.00000004</izz>
+          </inertia>
+          <mass>0.001</mass>
+        </inertial>
+        <visual name="visual_sphere">
+          <geometry>
+            <sphere>
+              <radius>0.010000</radius>
+            </sphere>
+          </geometry>
+        </visual>
+        <!--
+        <collision name="collision_sphere">
+          <max_contacts>250</max_contacts>
+          <geometry>
+            <sphere>
+              <radius>0.010000</radius>
+            </sphere>
+          </geometry>
+        </collision>
+        -->
+      </link>
+      
+
+      <link name="link_force">
+        <pose>0 -0.1 0 0 0 0</pose>
+        <inertial>
+          <inertia>
+            <ixx>0.000000400000</ixx>
+            <ixy>0.000000</ixy>
+            <ixz>0.000000</ixz>
+            <iyy>0.000000400000</iyy>
+            <iyz>0.000000</iyz>
+            <izz>0.000000400000</izz>
+          </inertia>
+          <mass>0.010000</mass>
+        </inertial>
+        <visual name="visual_sphere">
+          <geometry>
+            <sphere>
+              <radius>0.010000</radius>
+            </sphere>
+          </geometry>
+        </visual>
+        <visual name="visual_cylinder">
+          <pose>0 0.05 0 1.57 0 0</pose>
+          <geometry>
+            <cylinder>
+              <radius>0.0050000</radius>
+              <length>0.1</length>
+            </cylinder>
+          </geometry>
+        </visual>
+        <collision name="collision_sphere">
+          <max_contacts>250</max_contacts>
+          <geometry>
+            <sphere>
+              <radius>0.010000</radius>
+            </sphere>
+          </geometry>
+        </collision>
+      </link>
+      
+
+
+      <joint name="joint_02" type="revolute">
+        <parent>force_sensor_base</parent>
+        <child>link_force</child>
+        <pose>0 0.1 0 0 0 0</pose>
+        <axis>
+          <limit>
+            <lower>-1.57079</lower>
+            <upper>1.57079</upper>
+          </limit>
+          <dynamics>
+            <spring_stiffness>0.02</spring_stiffness>
+            <damping>0.0005</damping>
+            <friction>0.00010000</friction>
+          </dynamics>
+          <xyz>0.000000 0.000000 1.000000</xyz>
+        </axis>
+        <sensor name="force_torque" type="force_torque">
+          <update_rate>30</update_rate>
+        </sensor>
+      </joint>
+    </model>
+</sdf>

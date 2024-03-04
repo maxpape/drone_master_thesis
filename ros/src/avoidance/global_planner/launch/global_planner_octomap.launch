@@ -1,5 +1,5 @@
 <launch>
-    <arg name="pointcloud_topics" default="[/camera/depth/points]"/>
+    <arg name="pointcloud_topics" default="[/iris_depth_camera/camera/depth/points]"/>
     <arg name="camera_frame_id" default="camera_link"/>
     <arg name="start_pos_x" default="0.5" />
     <arg name="start_pos_y" default="0.5" />
@@ -41,6 +41,6 @@
         <param name="height_map" value="false" />
         <param name="publish_free_space" value="false" />
         <!-- data source to integrate (PointCloud2) -->
-        <!-- <remap from="cloud_in" to="$(arg point_cloud_topic)" /> -->
+        <remap from="cloud_in" to="/iris_depth_camera/camera/depth/points" />
     </node>
 </launch>

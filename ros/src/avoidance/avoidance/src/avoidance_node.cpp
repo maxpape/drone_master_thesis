@@ -7,7 +7,7 @@ AvoidanceNode::AvoidanceNode(const ros::NodeHandle& nh, const ros::NodeHandle& n
   position_received_ = true;
   should_exit_ = false;
 
-  timeout_termination_ = 15;
+  timeout_termination_ = 30;
   timeout_critical_ = 0.5;
   timeout_startup_ = 5.0;
 
@@ -66,7 +66,9 @@ void AvoidanceNode::checkFailsafe(ros::Duration since_last_cloud, ros::Duration 
 
   if (since_last_cloud > timeout_termination && since_start > timeout_termination) {
     setSystemStatus(MAV_STATE::MAV_STATE_FLIGHT_TERMINATION);
-    ROS_WARN("\033[1;33m Planner abort: missing required data \n \033[0m");
+    
+    printf("time since last cloud: %f \n", since_last_cloud.toSec());
+    ROS_WARN("\033[1;33m Planner abort: missing required data!!! \n \033[0m");
   } else {
     if (since_last_cloud > timeout_critical && since_start > timeout_startup) {
       if (position_received_) {

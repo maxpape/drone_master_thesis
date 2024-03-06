@@ -24,7 +24,7 @@ GlobalPlannerNode::GlobalPlannerNode(const ros::NodeHandle& nh, const ros::NodeH
   readParams();
 
   // Subscribers
-  octomap_full_sub_ = nh_.subscribe("octomap_full", 1, &GlobalPlannerNode::octomapFullCallback, this);
+  octomap_full_sub_ = nh_.subscribe("/octomap_full", 1, &GlobalPlannerNode::octomapFullCallback, this);
   ground_truth_sub_ = nh_.subscribe("mavros/local_position/pose", 1, &GlobalPlannerNode::positionCallback, this);
   velocity_sub_ = nh_.subscribe("mavros/local_position/velocity", 1, &GlobalPlannerNode::velocityCallback, this);
   clicked_point_sub_ = nh_.subscribe("clicked_point", 1, &GlobalPlannerNode::clickedPointCallback, this);
@@ -263,7 +263,7 @@ void GlobalPlannerNode::fcuInputGoalCallback(const mavros_msgs::Trajectory& msg)
 // Check if the current path is blocked
 void GlobalPlannerNode::octomapFullCallback(const octomap_msgs::Octomap& msg) {
   std::lock_guard<std::mutex> lock(mutex_);
-
+  ROS_WARN("new map received");
   ros::Time current = ros::Time::now();
   // Update map at a fixed rate. This is useful on setting replanning rates for the planner.
   if ((current - last_wp_time_).toSec() < mapupdate_dt_) {

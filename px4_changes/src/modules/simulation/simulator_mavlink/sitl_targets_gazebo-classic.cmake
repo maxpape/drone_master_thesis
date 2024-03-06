@@ -83,6 +83,7 @@ if(gazebo_FOUND)
 		iris_obs_avoid
 		iris_depth_camera
 		iris_force_sensor
+		modified_iris_depth
 		iris_downward_depth_camera
 		iris_opt_flow
 		iris_opt_flow_mockup

@@ -105,4 +105,5 @@ px4_add_romfs_files(
 	# [22000, 22999] Reserve for custom models
 
 	22001_gazebo-classic_iris_force_sensor
+	22002_gazebo-classic_modified_iris_depth
 )

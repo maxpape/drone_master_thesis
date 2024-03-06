@@ -1,13 +1,13 @@
 <launch>
     <arg name="world_path" default="$(find avoidance)/sim/worlds/outdoor_village_3.world" />
-    <arg name="gui" default="false"/>
+    <arg name="gui" default="true"/>
     <arg name="ns" default="/"/>
     <arg name="model" default="iris_depth_camera"/>
     <arg name="fcu_url" default="udp://:14540@localhost:14557"/>
     <arg name="gcs_url" default="" />   <!-- GCS link is provided by SITL -->
     <arg name="tgt_system" default="1" />
     <arg name="tgt_component" default="1" />
-    <arg name="vehicle" default="iris_obs_avoid"/>
+    <arg name="vehicle" default="iris_depth_camera"/>
 
     <param name="use_sim_time" value="true" />
 

@@ -22,3 +22,7 @@ cd build
 cmake -DACADOS_WITH_QPOASES=ON ..
 
 make install -j4
+
+cd /drone_master_thesis/ros
+catkin build open3d_slam -DCMAKE_BUILD_TYPE=Release
+catkin build open3d_slam_ros -DCMAKE_BUILD_TYPE=Release

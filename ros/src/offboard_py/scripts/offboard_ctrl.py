@@ -67,10 +67,10 @@ class MPC:
         ocp.cost.cost_type = 'NONLINEAR_LS'
         ocp.cost.cost_type_e = 'NONLINEAR_LS'
         
-        Q_mat = np.eye((9))
+        Q_mat = np.zeros((9,9))
         Q_mat[0,0] = 2
         Q_mat[1,1] = 2
-        Q_mat[2,2] = 2
+        Q_mat[2,2] = 4
         
         R_mat = np.eye(3)
 
@@ -103,15 +103,15 @@ class MPC:
 
 
         # slack for constraints
-        ocp.constraints.lsbx = np.array([-2,-2,-2])
-        ocp.constraints.usbx = np.array([+2,+2,+2])
-        ocp.constraints.idxsbx = np.array([0,1,2])
-        #
-        ns = 3
-        ocp.cost.zl = 10e-1 * np.ones((ns,)) # gradient wrt lower slack at intermediate shooting nodes (1 to N-1)
-        ocp.cost.Zl = np.ones((ns,))    # diagonal of Hessian wrt lower slack at intermediate shooting nodes (1 to N-1)
-        ocp.cost.zu = 10e-1 * np.ones((ns,))    
-        ocp.cost.Zu = np.ones((ns,))  
+        #ocp.constraints.lsbx = np.array([-2,-2,-2])
+        #ocp.constraints.usbx = np.array([+2,+2,+2])
+        #ocp.constraints.idxsbx = np.array([0,1,2])
+        ##
+        #ns = 3
+        #ocp.cost.zl = 10e-1 * np.ones((ns,)) # gradient wrt lower slack at intermediate shooting nodes (1 to N-1)
+        #ocp.cost.Zl = np.ones((ns,))    # diagonal of Hessian wrt lower slack at intermediate shooting nodes (1 to N-1)
+        #ocp.cost.zu = 10e-1 * np.ones((ns,))    
+        #ocp.cost.Zu = np.ones((ns,))  
     
         ocp.solver_options.nlp_solver_type = 'SQP_RTI'
         
@@ -304,7 +304,7 @@ def set_mpc_target_pos():
     yref_e[0:3] = mpc.pos_setpoint
     
     
-    print(yref, yref_e)
+    #print(yref, yref_e)
     for j in range(mpc.N_horizon):
         
         mpc.ocp_solver.set(j, "yref", yref)
@@ -312,17 +312,17 @@ def set_mpc_target_pos():
     
     
     
-    lbx = np.asarray([-5, -5, -5, -5, -5, -5])
-    ubx = np.asarray([+5, +5, +5, +5, +5, +5])
+    #lbx = np.asarray([-5, -5, -5, -5, -5, -5])
+    #ubx = np.asarray([+5, +5, +5, +5, +5, +5])
     
     
         
     
-    mpc.ocp_solver.set(0, "lbx", mpc.current_state)
-    mpc.ocp_solver.set(0, "ubx", mpc.current_state)   
-    for j in range(1, N_horizon):
-        mpc.ocp_solver.set(j, "lbx", lbx)
-        mpc.ocp_solver.set(j, "ubx", ubx)
+    #mpc.ocp_solver.set(0, "lbx", mpc.current_state)
+    #mpc.ocp_solver.set(0, "ubx", mpc.current_state)   
+    #for j in range(1, N_horizon):
+       # mpc.ocp_solver.set(j, "lbx", lbx)
+        #mpc.ocp_solver.set(j, "ubx", ubx)
     
     
     
@@ -442,8 +442,9 @@ def main():
 
     
     
-        
-            
+    v_x_set = 0
+    v_y_set = 0
+    v_z_set = 0        
     
     
     counter = 0

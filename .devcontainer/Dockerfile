@@ -18,6 +18,11 @@ ADD . .
 # Add user to video group to allow access to webcam
 RUN sudo usermod --append --groups video $USERNAME
 
+# add open3d repo
+RUN sudo apt install -y software-properties-common
+RUN sudo add-apt-repository ppa:roehling/open3d
+RUN sudo apt update -y && sudo apt install -y libopen3d-dev
+
 # Update all packages
 RUN sudo apt update -y && sudo apt upgrade -y
 
@@ -29,6 +34,9 @@ RUN sudo apt install -y ros-noetic-mavros ros-noetic-mavros-extras ros-noetic-ma
 
 RUN sudo apt install -y python3-tk nano python3-catkin-tools
 RUN sudo apt install -y libpcl1 ros-noetic-octomap-*
+
+# dependencies of open3D-slam
+RUN sudo apt install -y libgoogle-glog-dev libglfw3 libglfw3-dev ros-noetic-jsk-rviz-plugins liblua5.2-dev
 
 # Rosdep update
 RUN rosdep update

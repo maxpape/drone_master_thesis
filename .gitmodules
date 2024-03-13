@@ -4,3 +4,15 @@
 [submodule "acados"]
 	path = acados
 	url = https://github.com/acados/acados.git
+[submodule "sdf2urdf"]
+	path = sdf2urdf
+	url = https://github.com/theg4sh/sdf2urdf.git
+[submodule "depthimage_to_laserscan"]
+	path = ros/src/depthimage_to_laserscan
+	url = https://github.com/ros-perception/depthimage_to_laserscan.git
+[submodule "mavros-moveit"]
+	path = ros/src/mavros-moveit
+	url = https://github.com/saifullah3396/mavros_moveit.git
+[submodule "ros/src/open3d_slam"]
+	path = ros/src/open3d_slam
+	url = https://github.com/leggedrobotics/open3d_slam.git
